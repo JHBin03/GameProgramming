@@ -9,10 +9,13 @@ int main(void)
     printf("정사각형 그리기\n\n");
     printf("정사각형의 길이(최대 37)를\n");
     printf("입력하고 Enter>");
-
     scanf("%d", &n);
 
     draw_square(n);
+
+    printf("\n종료하려면 Enter를 누르세요...");
+    getchar();
+    getchar();
 
     return 0;
 }
@@ -26,7 +29,6 @@ void draw_square(int size)
     for(i = 1; i < 7; i++)
         b[i] = 0xa0 + i;
 
-    // 위쪽
     printf("%c%c", a, b[3]);
 
     for(i = 0; i < size; i++)
@@ -35,7 +37,6 @@ void draw_square(int size)
     printf("%c%c", a, b[4]);
     printf("\n");
 
-    // 가운데
     for(i = 0; i < size; i++)
     {
         printf("%c%c", a, b[2]);
@@ -47,7 +48,6 @@ void draw_square(int size)
         printf("\n");
     }
 
-    // 아래쪽
     printf("%c%c", a, b[6]);
 
     for(i = 0; i < size; i++)
