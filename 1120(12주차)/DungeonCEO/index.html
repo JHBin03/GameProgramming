@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="마왕의 던전 운영 화면">
+  <title>Dungeon CEO</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand"><span class="crest" aria-hidden="true">♜</span><h1>Dungeon <strong>CEO</strong></h1></div>
+      <span id="hud-day" class="hud-day"></span>
+      <p id="hud-goal" class="hud-goal"></p>
+      <div class="gold"><span class="coin" aria-hidden="true">◆</span><span>보유 골드</span><strong id="gold"></strong></div>
+      <button class="action" id="open-operations" type="button" aria-haspopup="dialog">운영 <kbd>O</kbd></button>
+    </div>
+  </header>
+  <main class="dashboard">
+    <section class="frame dungeon" id="dungeon-section" aria-labelledby="dungeon-title">
+      <header class="section-head"><h2 id="dungeon-title">던전 전경</h2><span class="location" id="floor-count"></span></header>
+      <div class="map-legend" aria-label="지도 상태 범례"><span>◇ 선택한 방</span><span>⚔ 교전 중</span><span>⚠ 작업장 사고</span><span>오른쪽 입구 → 왼쪽 마왕방</span></div>
+      <section class="management-goals" aria-labelledby="management-goals-title">
+        <div class="goal-heading"><h3 id="management-goals-title">마왕의 경영 목표</h3><span id="management-goal-progress"></span></div>
+        <ol id="management-goal-steps" aria-label="경영 목표 단계"></ol>
+        <div role="status">
+          <p id="management-goal-current" class="goal-current"></p>
+          <p id="management-goal-condition"></p>
+          <p id="management-goal-detail"></p>
+        </div>
+      </section>
+      <div id="first-day-guide-home">
+        <section class="first-day-guide" id="first-day-guide" aria-labelledby="first-day-guide-title">
+          <header>
+            <h3 id="first-day-guide-title">첫날 플레이 안내</h3>
+            <button class="action" id="close-first-day-guide" type="button" aria-label="첫날 플레이 안내 닫기">안내 닫기</button>
+          </header>
+          <div role="status" aria-live="polite" aria-atomic="true">
+            <p id="first-day-guide-step"></p>
+            <p id="first-day-guide-text"></p>
+          </div>
+          <button class="action" id="confirm-first-settlement" type="button" hidden>정산 확인</button>
+        </section>
+      </div>
+      <p id="bankruptcy-warning" class="bankruptcy-notice" role="status" hidden></p>
+      <div id="game-over" class="bankruptcy-notice" hidden>
+        <h3>파산 · 게임 오버</h3>
+        <p>미납금이 3일 연속 남아 던전 운영이 종료되었습니다.</p>
+        <button class="action" id="restart-game" type="button">새 게임 시작</button>
+      </div>
+      <section id="victory-screen" class="raid-result victory-screen" aria-labelledby="victory-title" hidden>
+        <h3 id="victory-title">최종 방어 성공</h3>
+        <p>왕실 원정대를 견뎌냈습니다. 마왕의 던전은 계속됩니다.</p>
+        <p id="victory-details" role="status"></p>
+        <button class="action" id="continue-operation" type="button">계속 운영</button>
+        <button class="action" id="victory-new-game" type="button">새 게임</button>
+      </section>
+      <p class="map-guide" id="map-guide">용사가 차례로 입장해 오른쪽에서 왼쪽으로 탐색합니다. 악명이 오르면 강한 명예 용사가 섞여 들어오고, 인기도가 오르면 침입 인원이 늘어납니다. 체력이 0이 된 용사는 3칸의 도망 게이지로 시작방까지 돌아갑니다. 돌아가는 방에 교전 중이 아닌 몬스터가 있으면 50% 확률로 게이지가 1칸 줄고, 모두 잃으면 사망합니다. 방의 슬롯을 눌러 몬스터와 함정을 배치할 수 있습니다.</p>
+      <div class="map-scroll" tabindex="0" role="region" aria-label="던전 지도" aria-describedby="map-guide">
+        <div id="dungeon-map"></div>
+      </div>
+      <div class="route-controls">
+        <button class="action primary" type="button" id="start-route">침입 시작 <kbd>I</kbd></button>
+        <button class="action" type="button" id="toggle-scout-report" aria-expanded="false" aria-controls="scout-report">침입 정찰 보고</button>
+        <div class="raid-time-controls" role="group" aria-label="침입 시간 조절">
+          <button class="action" type="button" id="pause-raid" aria-pressed="false" disabled>일시정지</button>
+          <button class="action" type="button" id="raid-speed-1" aria-pressed="true" disabled>1배속</button>
+          <button class="action" type="button" id="raid-speed-2" aria-pressed="false" disabled>2배속</button>
+          <span id="raid-time-status" role="status" aria-live="polite">침입 중 시간 조절 가능</span>
+        </div>
+        <p id="route-status" role="status"></p>
+      </div>
+      <p class="map-guide" id="raid-preview"></p>
+      <label id="royal-challenge-choice" hidden><input id="royal-challenge" type="checkbox"> 왕실 원정대 · 고정 최종 난이도 (정예 12명 HP 200 / 공격 24 + 대장 HP 600 / 공격 40)</label>
+      <p id="royal-history" role="status"></p>
+      <section class="scout-report" id="scout-report" aria-labelledby="scout-title" hidden>
+        <h3 id="scout-title">침입 정찰 보고</h3>
+        <p class="panel-description" id="scout-summary"></p>
+        <p class="panel-description">용사를 선택하면 직업 특성과 현재 배치에서 주의할 점을 확인할 수 있습니다. 홍보 효과와 처치 보상에 따른 인원 변경은 실제 침입에도 함께 반영됩니다.</p>
+        <ol id="scout-roster" aria-label="용사 입장 순서"></ol>
+        <p id="scout-advice" role="status" aria-live="polite" aria-atomic="true"></p>
+      </section>
+      <section class="raid-result" id="raid-result" aria-labelledby="raid-result-title" hidden>
+        <h3 id="raid-result-title"></h3>
+        <p id="raid-result-totals"></p>
+        <button class="action" id="return-to-map" type="button">지도로 돌아가기</button>
+        <table>
+          <thead><tr><th scope="col">일반방</th><th scope="col">격퇴</th><th scope="col">교전 중 통과</th></tr></thead>
+          <tbody id="raid-result-rooms"></tbody>
+        </table>
+      </section>
+      <section class="daily-ledger raid-result" id="daily-ledger" aria-labelledby="ledger-title">
+        <h3 id="ledger-title">일일 경영 장부</h3>
+        <p class="panel-description">최근 마감 3일 비교 · 날짜를 누르면 상세를 확인합니다. 침입 사이 거래와 생산·유지비는 당일에 기록합니다. G는 골드이며, 미납금은 현금과 별도로 계산합니다.</p>
+        <div class="ledger-scroll"><table aria-label="최근 3일 경영 비교"><thead id="ledger-head"></thead><tbody id="ledger-comparison"></tbody></table></div>
+        <label for="ledger-day">지난 장부 및 진행 중 날짜</label>
+        <select id="ledger-day"></select>
+        <h4 id="ledger-detail-title"></h4>
+        <p id="ledger-balance"></p>
+        <p id="ledger-largest"></p>
+        <details><summary>전체 거래 내역 (대출·상환 별도 표시)</summary><ol id="ledger-transactions"></ol></details>
+        <h4>방별 전투 결과</h4>
+        <p id="ledger-no-battle">아직 침입 정산 결과가 없습니다.</p>
+        <table aria-label="선택 날짜 방별 전투 결과"><thead><tr><th scope="col">일반방</th><th scope="col">격퇴</th><th scope="col">교전 중 통과</th></tr></thead><tbody id="ledger-rooms"></tbody></table>
+      </section>
+      <p class="map-guide">방어실과 작업장을 전환하려면 배치된 몬스터와 함정을 먼저 해제하세요. 채굴 몬스터가 있는 작업장에는 침입 전에 철 4개로 지지대를 설치할 수 있습니다. 지지대는 붕괴 시 한 번 소모되어 몬스터 전원을 살리며, 당일 생산은 멈추고 다음 날 복귀합니다. 빈 방을 방어실로 전환하면 지지대는 철 반환 없이 철거됩니다. 장비 고장은 일일 정산 전에 고칠 수 있습니다.</p>
+    </section>
+    <aside class="frame management" id="management-section" aria-labelledby="management-title">
+      <header class="section-head">
+        <h2 id="management-title">운영 관리</h2>
+        <div class="management-actions">
+          <button class="action" id="open-first-day-guide" type="button" aria-controls="first-day-guide" aria-expanded="true">첫날 안내</button>
+          <button class="action" id="open-activities" type="button" aria-haspopup="dialog">활동</button>
+          <button class="action" id="open-research" type="button" aria-haspopup="dialog">연구실</button>
+          <button class="action" id="open-game-settings" type="button" aria-haspopup="dialog">이름 · 저장</button>
+        </div>
+      </header>
+      <div class="management-content">
+        <div id="dungeon-stats"></div>
+        <section class="expansion delivery-contract" aria-labelledby="delivery-title">
+          <h3 id="delivery-title">던전 납품 계약</h3>
+          <p class="panel-description">상인 길드의 선택 제안입니다. 자원을 증축에 남길지 골드로 바꿀지 결정하세요. 거절하거나 납품하지 않아도 벌금은 없습니다. 다음 정산 때 새 계약으로 교체됩니다.</p>
+          <div id="delivery-details" hidden>
+            <p id="delivery-offer"></p>
+            <p id="delivery-inventory"></p>
+            <p id="delivery-expansion"></p>
+            <div class="delivery-actions">
+              <button class="action" id="deliver-contract" type="button">납품하고 골드 받기</button>
+              <button class="action" id="decline-contract" type="button">오늘 제안 거절</button>
+            </div>
+          </div>
+          <p id="delivery-status" role="status" aria-live="polite"></p>
+        </section>
+        <section class="expansion" aria-labelledby="bank-title">
+          <h3 id="bank-title">은행</h3>
+          <p id="debt-payment-status" role="status"></p>
+          <form id="bank-loan-form">
+            <label for="bank-loan">대출액 (골드)</label>
+            <input id="bank-loan" type="number" min="1" step="1" aria-describedby="bank-loan-guide" required>
+            <button class="action" id="take-loan" type="submit">대출받기</button>
+          </form>
+          <p class="panel-description" id="bank-loan-guide" aria-live="polite"></p>
+          <form id="debt-payment-form" hidden>
+            <label for="debt-payment">납부액 (골드)</label>
+            <input id="debt-payment" type="number" min="1" step="1" required>
+            <button class="action" id="pay-debt" type="submit">납부</button>
+          </form>
+        </section>
+        <section class="expansion" aria-labelledby="throne-raid-title">
+          <h3 id="throne-raid-title">마왕방 레이드</h3>
+          <p class="panel-description">마왕방에 도착한 용사들이 함께 싸웁니다. 마왕이 쓰러지면 참전한 용사 전원에게 같은 골드를 지급합니다. 부족한 골드는 미납금에 합산됩니다.</p>
+          <form id="throne-reward-form">
+            <label for="throne-reward">마왕 처치 보상 (1인당 골드)</label>
+            <input id="throne-reward" type="number" min="0" max="10000" step="1" aria-describedby="throne-reward-guide throne-reward-status" required>
+            <button class="action" type="submit" id="apply-throne-reward">보상 적용</button>
+          </form>
+          <table class="reward-comparison" aria-describedby="throne-reward-guide">
+            <caption>다음 침입 보상 비교</caption>
+            <thead><tr><th scope="col">비교 항목</th><th scope="col">현재 적용</th><th scope="col">입력 미리보기</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">1인당 보상</th><td id="reward-current-reward"></td><td id="reward-proposed-reward"></td></tr>
+              <tr><th scope="row">예상 용사</th><td id="reward-current-size"></td><td id="reward-proposed-size"></td></tr>
+              <tr><th scope="row">그중 명예 용사</th><td id="reward-current-honorCount"></td><td id="reward-proposed-honorCount"></td></tr>
+              <tr><th scope="row">통행료 수입</th><td id="reward-current-toll"></td><td id="reward-proposed-toll"></td></tr>
+              <tr><th scope="row">최대 지급액</th><td id="reward-current-maximum"></td><td id="reward-proposed-maximum"></td></tr>
+            </tbody>
+          </table>
+          <p class="panel-description" id="throne-reward-guide">최대 지급액은 예상 용사 전원이 마왕방에 도달해 마왕을 쓰러뜨릴 때의 보상 총액입니다. ‘보상 적용’을 눌러야 실제 보상과 정찰 보고가 바뀝니다.</p>
+          <p id="throne-reward-status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <p class="panel-description">보상 50골드마다 인기도가 1 오릅니다. 250골드부터 악명이 0이어도 명예 용사가 등장하며, 보상이 높을수록 더 많이, 더 강하게 등장합니다.</p>
+        </section>
+        <div class="expansion">
+          <h3>층 증축</h3>
+          <div id="expansion-guide-home"></div>
+          <p id="expansion-cost"></p>
+          <button class="action" type="button" id="expand-floor">층 증축하기</button>
+          <p id="expansion-status" role="status"></p>
+          <p class="panel-description">용사 한 명당 통행료 20골드를 받습니다. 체력이 처음 20% 이하가 된 용사는 20% 확률로 통행료를 내고 마을로 돌아갑니다. 침입이 끝나면 마왕 레벨이 1 오르고, 작업장 생산과 몬스터 유지비를 정산합니다.</p>
+        </div>
+      </div>
+    </aside>
+    <details class="frame journal">
+      <summary class="section-head" id="log-title">게임 로그 · 펼쳐서 전체 내역 보기</summary>
+      <ol class="log-list" id="logs"></ol>
+    </details>
+  </main>
+  <dialog class="placement-dialog operations-dialog" id="operations-dialog" aria-labelledby="operations-title">
+    <header class="dialog-heading"><h2 id="operations-title">던전 운영</h2><form method="dialog"><button class="action" autofocus>닫기 · Esc</button></form></header>
+    <nav class="operations-nav" aria-label="운영 메뉴"><button class="action" data-operation="management-section">운영 · 증축</button><button class="action" data-operation="delivery-title">계약</button><button class="action" data-operation="daily-ledger">장부</button><button class="action" id="operations-research">연구</button></nav>
+    <div id="operations-content"></div>
+  </dialog>
+  <dialog class="placement-dialog" id="game-settings" aria-labelledby="game-settings-title">
+    <header class="dialog-heading">
+      <h2 id="game-settings-title">이름 · 저장</h2>
+      <form method="dialog"><button class="action">닫기</button></form>
+    </header>
+    <form id="name-form">
+      <label>마왕 이름 <input id="demon-name" name="demonName" type="text" maxlength="24" required></label>
+      <label>던전 이름 <input id="dungeon-name" name="dungeonName" type="text" maxlength="24" required></label>
+      <div><button class="action" type="submit" id="apply-names">이름 적용</button></div>
+    </form>
+    <div class="save-controls">
+      <button class="action" type="button" id="save-game">게임 저장</button>
+      <button class="action" type="button" id="load-game">불러오기</button>
+    </div>
+    <p class="panel-description" id="save-slot"></p>
+    <p class="panel-description" id="save-status" role="status"></p>
+  </dialog>
+  <dialog class="placement-dialog" id="activities-dialog" aria-labelledby="activities-title">
+    <header class="dialog-heading">
+      <h2 id="activities-title">활동</h2>
+      <form method="dialog"><button class="action" autofocus>닫기</button></form>
+    </header>
+    <section class="promotion" aria-labelledby="promotion-title">
+      <h3 id="promotion-title">던전 홍보</h3>
+      <p class="panel-description">하루 한 번 골드를 지불해 홍보합니다. 다음 3번의 일일 정산마다 당시 인기도의 20%만큼 오릅니다(올림, 최소 1). 비용은 현재 인기도에 따라 늘어납니다.</p>
+      <p class="panel-description">진행 중에 다시 홍보하면 남은 기간이 3일로 갱신됩니다.</p>
+      <button class="action" id="promotion-buy" type="button">홍보하기</button>
+      <p class="panel-description" id="promotion-status" role="status"></p>
+    </section>
+  </dialog>
+  <dialog class="placement-dialog" id="research-dialog" aria-labelledby="research-title">
+    <header class="dialog-heading">
+      <h2 id="research-title">고대 유물 연구실</h2>
+      <form method="dialog"><button class="action" autofocus>닫기</button></form>
+    </header>
+    <p class="panel-description" id="research-balance" role="status" aria-live="polite"></p>
+    <p class="panel-description">고대 유물로 각 연구를 한 번만 구매해 던전 전체에 영구 적용합니다. 침입 중에는 구매할 수 없습니다. 연구 결과와 남은 유물은 ‘이름 · 저장 → 게임 저장’에 함께 기록됩니다.</p>
+    <ul id="research-catalog" aria-label="고대 유물 연구"></ul>
+  </dialog>
+  <dialog class="placement-dialog" id="monster-dialog" aria-labelledby="placement-title">
+    <header class="dialog-heading">
+      <h2 id="placement-title"></h2>
+      <form method="dialog"><button class="action" autofocus>닫기</button></form>
+    </header>
+    <p class="panel-description" id="monster-summary"></p>
+    <p class="panel-description" id="placement-status" role="status"></p>
+    <form id="monster-move-form" hidden>
+      <label for="monster-move-target">몬스터 이동</label>
+      <select id="monster-move-target" required></select>
+      <button class="action" id="move-monster" type="submit">이동</button>
+    </form>
+    <button class="action dismiss-monster" id="dismiss-monster" type="button">선택한 몬스터 해고</button>
+    <ul class="monster-catalog" id="monster-catalog" aria-label="몬스터 정보"></ul>
+  </dialog>
+  <dialog class="placement-dialog" id="trap-dialog" aria-labelledby="trap-placement-title">
+    <header class="dialog-heading">
+      <h2 id="trap-placement-title"></h2>
+      <form method="dialog"><button class="action" autofocus>닫기</button></form>
+    </header>
+    <p class="panel-description" id="trap-summary"></p>
+    <p class="panel-description" id="trap-placement-status" role="status"></p>
+    <button class="action dismiss-monster" id="remove-trap" type="button">선택한 함정 철거</button>
+    <ul class="monster-catalog" id="trap-catalog" aria-label="함정 정보"></ul>
+    <section id="trap-modifications" hidden aria-labelledby="trap-modification-title">
+      <h3 id="trap-modification-title">가시 바닥 개조</h3>
+      <p class="panel-description" id="trap-modification-help"></p>
+      <ul class="monster-catalog" id="trap-modification-catalog" aria-label="가시 바닥 개조 선택"></ul>
+    </section>
+  </dialog>
+  <template id="panel-template">
+    <h3></h3><p class="panel-description"></p><dl class="stats"></dl>
+  </template>
+  <template id="stat-template">
+    <div class="stat"><dt></dt><dd></dd></div>
+  </template>
+  <template id="log-template">
+    <li class="log-entry"><time></time><span class="log-category"></span><span class="log-message"></span></li>
+  </template>
+</body>
+</html>
